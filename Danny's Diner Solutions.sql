@@ -1,4 +1,4 @@
-USE danny_diner;
+
 
 CREATE DATABASE danny_diner;
 
