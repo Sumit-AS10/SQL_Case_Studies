@@ -1,4 +1,3 @@
-USE danny_diner;
 
 CREATE DATABASE danny_diner;
 
@@ -84,7 +83,7 @@ SELECT
   customer_id
  ,order_date
  ,GROUP_CONCAT( DISTINCT product_name) AS 'first_orders'
-FROM(SELECT 
+FROM( SELECT 
 	customer_id
 	,order_date
 	,product_name
@@ -101,7 +100,7 @@ SELECT
   customer_id
  ,product_name
  ,COUNT(*) AS 'number_of_orders'
-FROM(SELECT
+FROM( SELECT
 	sales.product_id
 	,menu.product_name
 	,COUNT(sales.product_id) AS 'no_of_orders'
@@ -119,17 +118,17 @@ GROUP BY customer_id
 -- 5. Which item was the most popular for each customer?
 
 WITH FavItem AS ( SELECT
-				customer_id
-				,product_name
-				,COUNT(*) AS 'most_order'
-				,DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY COUNT(*) DESC) AS 'order_rank' 
-				FROM sales
-				JOIN menu
-				  ON sales.product_id = menu.product_id
-				  GROUP BY sales.product_id
-				         , customer_id
-				  ORDER BY customer_id
-					     , most_order DESC )
+			customer_id
+			,product_name
+			,COUNT(*) AS 'most_order'
+			,DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY COUNT(*) DESC) AS 'order_rank' 
+			FROM sales
+			JOIN menu
+			  ON sales.product_id = menu.product_id
+			  GROUP BY sales.product_id
+			         , customer_id
+			  ORDER BY customer_id
+	 		         , most_order DESC )
 SELECT
   customer_id
  ,GROUP_CONCAT(DISTINCT product_name) AS 'FavItem'
@@ -156,16 +155,16 @@ JOIN members
 -- 7. Which item was purchased just before the customer became a member?
 
 WITH previous_order AS ( SELECT 
-						sales.customer_id
-						,order_date
-						,product_name
-						,DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date DESC) AS 'last_order'
-						 FROM sales
-						 JOIN members
-						  ON sales.customer_id = members.customer_id
-						 JOIN menu
-						  ON sales.product_id = menu.product_id
-						  WHERE sales.order_date < members.join_date )
+				sales.customer_id
+				,order_date
+				,product_name
+				,DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date DESC) AS 'last_order'
+				 FROM sales
+				 JOIN members
+				  ON sales.customer_id = members.customer_id
+				 JOIN menu
+				  ON sales.product_id = menu.product_id
+				  WHERE sales.order_date < members.join_date )
 SELECT
   customer_id
  ,order_date
@@ -191,14 +190,14 @@ JOIN menu
 -- 9.  If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 
 WITH cte_points AS ( SELECT
-					customer_id
-					,CASE
-					    WHEN product_name = 'sushi' THEN price * 20
-						ELSE price * 10
-						END AS 'points'
-					FROM sales
-                    JOIN menu
-					  ON sales.product_id = menu.product_id )
+			  customer_id
+			  ,CASE
+			  WHEN product_name = 'sushi' THEN price * 20
+		 	  ELSE price * 10
+			  END AS 'points'
+  		    	  FROM sales
+                    	  JOIN menu
+		      	    ON sales.product_id = menu.product_id )
 SELECT
   customer_id
  ,SUM(points) AS 'points'
@@ -208,20 +207,20 @@ GROUP BY customer_id;
 -- 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 WITH total_points AS ( SELECT sales.customer_id
-						,MONTHNAME(order_date) AS 'month'
-						,CASE
-							WHEN sales.product_id = 1 THEN price*20
-							ELSE price*10
-							END AS 'points'
-					  FROM sales
-                      JOIN members
-					    ON sales.customer_id = members.customer_id
-					  JOIN menu
-						ON sales.product_id = menu.product_id
-						WHERE
-						sales.order_date >= members.join_date
-						AND
-						MONTH(order_date) = 1)
+			     ,MONTHNAME(order_date) AS 'month'
+			     ,CASE
+				WHEN sales.product_id = 1 THEN price*20
+	 			ELSE price*10
+				END AS 'points'
+				FROM sales
+                      		JOIN members
+		   	        ON sales.customer_id = members.customer_id
+	  		        JOIN menu
+				ON sales.product_id = menu.product_id
+				WHERE
+				sales.order_date >= members.join_date
+				AND
+				MONTH(order_date) = 1)
 SELECT 
 customer_id
  ,month
@@ -237,10 +236,10 @@ SELECT
   ,order_date
   ,product_name
   ,price
-  ,CASE
-	  WHEN sales.order_date >= members.join_date THEN 'Y'
-	  ELSE 'N'
-	  END AS 'Member'
+,CASE
+  WHEN sales.order_date >= members.join_date THEN 'Y'
+  ELSE 'N'
+  END AS 'Member' 
 FROM sales
 LEFT JOIN members
   ON sales.customer_id = members.customer_id
@@ -250,24 +249,24 @@ JOIN menu
 -- Bonus Question : Rank all the things
 
 WITH ranks AS ( SELECT 
-				sales.customer_id
-				,order_date
-				,product_name
-				,price
-				,CASE
-					WHEN sales.order_date >= members.join_date THEN 'Y'
-					ELSE 'N'
-					END AS 'Member'
-				FROM sales
-				LEFT JOIN members	
-				  ON sales.customer_id = members.customer_id
-				JOIN menu
-				  ON sales.product_id = menu.product_id )
+ 		    sales.customer_id
+		   ,order_date
+		   ,product_name
+ 		   ,price
+		   ,CASE
+			WHEN sales.order_date >= members.join_date THEN 'Y'
+			ELSE 'N'
+			END AS 'Member'
+			FROM sales
+			LEFT JOIN members	
+			  ON sales.customer_id = members.customer_id
+			JOIN menu
+			  ON sales.product_id = menu.product_id )
 SELECT 
   *
  ,CASE
 	WHEN member = 'Y' 
-		THEN DENSE_RANK() OVER(PARTITION BY customer_id, Member ORDER BY order_date)
-		ELSE 'null'
-		END AS 'ranking'
+	   THEN DENSE_RANK() OVER(PARTITION BY customer_id, Member ORDER BY order_date)
+	ELSE 'null'
+	END AS 'ranking'
 FROM ranks;
